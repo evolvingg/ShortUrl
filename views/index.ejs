@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+    </style>
+</head>
+<body>
+    <h1>Url shortener</h1>
+    <form action="/shortUrls" method="post" novalidate>
+        <label for="Url">
+            Enter the url to shorten:
+        </label>
+        <input type="url" name="Url" id="Url"/>
+        <label for="customUrl">
+            Chooose custom prefix:
+        </label>
+        <input type="text" name="customUrl" id="customUrl" />
+        <label for="expiryTime">
+            Chooose expiry period:
+        </label>
+        <input type="date" name="expiryTime" id="expiryTime" />
+        <button type="submit">submit</button>
+    </form>
+    <h2>
+        List accessed so far:
+    </h2>
+
+
+        <div>
+            <span>
+                <a href="<%= shortUrl.url %>" ><%= shortUrl.url %></a>
+            </span>
+            <span>
+                <a href="<%= shortUrl.urlCode %>" target="_blank"><%= shortUrl.urlCode %></a>
+            </span>
+            <span>
+                <a href="<%= shortUrl.hits %>"><%= shortUrl.hits %></a>
+            </span>
+        </div>
+
+</body>
+</html>
