@@ -6,7 +6,7 @@ const ShortUrl = require('./models/shortUrls');
 const port = process.env.PORT || 5000;
 require('dotenv').config();
 
-mongoose.connect('mongodb+srv://tanvi:DNGUBIEAXOAryyfM@cluster0-6utpu.mongodb.net/url-shortner?retryWrites=true&w=majority', {
+mongoose.connect('mongodb://tanvi:DNGUBIEAXOAryyfM@cluster0-shard-00-00-6utpu.mongodb.net:27017,cluster0-shard-00-01-6utpu.mongodb.net:27017,cluster0-shard-00-02-6utpu.mongodb.net:27017/url-shortner?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin&retryWrites=true&w=majority', {
   useNewUrlParser: true, useUnifiedTopology: true
 })
 
