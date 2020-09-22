@@ -11,18 +11,33 @@
 <body>
     <h1>Url shortener</h1>
     <form action="/shortUrls" method="post" novalidate>
-        <label for="Url">
+        <label for="url">
             Enter the url to shorten:
         </label>
-        <input type="url" name="Url" id="Url"/>
+        <input
+        type="url"
+        name="url"
+        id="url"
+        placeholder="Enter url to be shortened"
+        />
         <label for="customUrl">
             Chooose custom prefix:
         </label>
-        <input type="text" name="customUrl" id="customUrl" />
+        <input 
+        type="text"
+        name="customUrl"
+        id="customUrl"
+        placeholder="Customize the url"
+        />
         <label for="expiryTime">
             Chooose expiry period:
         </label>
-        <input type="date" name="expiryTime" id="expiryTime" />
+        <input
+        type="number"
+        name="expiryTime"
+        id="expiryTime"
+        placeholder="Expire time for link (in seconds)"
+      />
         <button type="submit">submit</button>
     </form>
     <h2>
@@ -30,7 +45,8 @@
     </h2>
 
 
-        <div>
+    <% shortUrls.length>0 && shortUrls.forEach(shortUrl => { %>
+          <div>
             <span>
                 <a href="<%= shortUrl.url %>" ><%= shortUrl.url %></a>
             </span>
@@ -38,9 +54,30 @@
                 <a href="<%= shortUrl.urlCode %>" target="_blank"><%= shortUrl.urlCode %></a>
             </span>
             <span>
-                <a href="<%= shortUrl.hits %>"><%= shortUrl.hits %></a>
+            <%= shortUrl.hits %>
             </span>
-        </div>
+          </div>
+        <% }) %>
 
+        <% if(searched) { %>
+            <h4>Short url found</h4>
+            <div>
+                <span>
+                    <a href="<%= searched.url %>" ><%= searched.url %></a>
+                </span>
+                <span>
+                    <a href="<%= searched.urlCode %>" target="_blank"><%= searched.urlCode %></a>
+                </span>
+                <span>
+                <%= searched.hits %>
+                </span>
+                <span>
+                <%= searched.searched %>
+                </span>
+            </div>
+        <% } %>
 </body>
+<script>
+
+</script>
 </html>
