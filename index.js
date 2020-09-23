@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: false}))
 app.get('/', async (req, res) => {
   try {
     const shortUrls = await ShortUrl.find()
-    res.render('index', { shortUrls: shortUrls,searched:null })
+    res.render('index', { shortUrls, searched: null })
   }
   catch(err) {
     res.render('error',{msg:err});
