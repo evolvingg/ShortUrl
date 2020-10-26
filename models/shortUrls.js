@@ -31,7 +31,7 @@ const ShortUrlsSchema = new Schema({
     searched: {
         type: Number,
         required: true,
-        default: 0
+        default: 1
     }
 });
 
