@@ -2,41 +2,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
 const ShortUrl = require('./models/shortUrls');
-
-
-const Memcached = require('memcached');
-const MEMCACHE_PORT = 11211;
-// time in seconds, default set to 30 mins
-const DEFAULT_CACHE_LIFETIME = 30 * 60;
-const memcached = new Memcached(`localhost:${MEMCACHE_PORT}`, { retries: 10, retry: 10000, remove: true });
-
-memcached.connect( 'localhost:11211', function( err, conn ){
-  if( err ) {
-  console.log( conn.server,'error while memcached connection!!');
-  }
-});
-
-const getValue = (key) => {
-  return new Promise((resolve, reject) => {
-    memcached.get(key, function (err, data) {
-      if (data) {
-        return resolve(data);
-      }
-      return resolve('');
-    });
-  });
-}
-
- const setValue = (key, value, lifetime = DEFAULT_CACHE_LIFETIME) => {
-  return new Promise((resolve, reject) => {
-    memcached.set(key, value, lifetime, function (err) {
-      if (err) {
-        return reject(err);
-      }
-      return resolve(value);
-    });
-  });
-}
+const shortId = require('shortid');
+const cacheService = require('./cacheService/cache');
 
 const port = process.env.PORT || 5000;
 require('dotenv').config();
@@ -75,7 +42,8 @@ app.post('/shortUrls', async (req, res) => {
       } 
     }
   
-    console.log("custom name:", customUrl,url,expiryTime);
+    console.log("custom name:", url,expiryTime);
+    console.log('---cst---',customUrl)
   
     if(!expiryTime) {
       res.render('error',{msg:"provide expire time"});
@@ -84,9 +52,13 @@ app.post('/shortUrls', async (req, res) => {
       res.render('error',{msg:"provide valid expire time"});
     }
 
-    const urlCached = await getValue(url);
-    console.log('cache----',urlCached);
+    const urlCached = await cacheService.getValue(url);
     if(urlCached){
+      console.log('cache----',urlCached);
+      if(customUrl) {
+        cacheService.replaceValue(url,{...urlCached,customUrl});
+        res.render('index',{ searched:{...urlCached,customUrl}, shortUrls});
+      }
       res.render('index',{ searched:urlCached, shortUrls});
     }
 
@@ -94,12 +66,12 @@ app.post('/shortUrls', async (req, res) => {
       //not found in cache then hit db
       let searched = await ShortUrl.findOne({url:url});
       if(searched) {
-        //searched 5 times so goes in cache
-        if(searched.searched >= 5) {           
-          setValue( url,searched ); //in ms
-        }
         searched.searched++;
         searched.save();
+        //searched 5 times so goes in cache
+        if(searched.searched >= 5) {           
+          cacheService.setValue( url,searched ); //in ms
+        }
         console.log('db----',searched);
         res.render('index',{ searched, shortUrls})
       }
@@ -107,7 +79,7 @@ app.post('/shortUrls', async (req, res) => {
         const currentDate = new Date().getTime();
         const expiryDate = new Date(currentDate + parseInt(expiryTime) * 1000);
         if (customUrl == ''){
-          await ShortUrl.create({ url, customUrl, expiryDate })
+          await ShortUrl.create({ url, customUrl:shortId.generate().toLowerCase(), expiryDate })
         }
         else {
           let nameExists = await ShortUrl.findOne({ customUrl });
@@ -115,7 +87,7 @@ app.post('/shortUrls', async (req, res) => {
             res.render('error',{msg:"name already exists, choose another"});
           }
           else {
-            await ShortUrl.create({ url, urlCode:customUrl, expiryDate, customUrl })
+            await ShortUrl.create({ url, customUrl, expiryDate })
           }
         }
       }
@@ -132,7 +104,7 @@ app.post('/shortUrls', async (req, res) => {
  
 app.get('/:shortUrl', async (req, res) => {
   try {
-    const shortUrl = await ShortUrl.findOne({urlCode: req.params.shortUrl})
+    const shortUrl = await ShortUrl.findOne({customUrl: req.params.shortUrl})
 
     if(shortUrl == null) {
       res.render('error',{msg:'link expired'});

@@ -9,11 +9,6 @@ const ShortUrlsSchema = new Schema({
         type: String,
         required: true
     },
-    urlCode: {
-        type: String,
-        required: true,
-        default: shortId.generate 
-    },
     hits: {
         type: Number,
         required: true,
@@ -21,7 +16,7 @@ const ShortUrlsSchema = new Schema({
     },
     customUrl: {
         type: String,
-        required: false
+        required: true
     },
     expiryDate: {
         type: Date,
