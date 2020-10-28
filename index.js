@@ -34,6 +34,7 @@ app.post('/shortUrls', async (req, res) => {
     const expiryTime = req.body.expiryTime;
     const shortUrls = await ShortUrl.find();
 
+    //check if url is valid
     if (url) {
       const urlRegex = new RegExp(/((https):\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/);
       let result = urlRegex.test(url);
@@ -43,8 +44,9 @@ app.post('/shortUrls', async (req, res) => {
     }
   
     console.log("custom name:", url,expiryTime);
-    console.log('---cst---',customUrl)
-  
+    console.log('---cst---',customUrl);
+
+    //expiry time should be correct
     if(!expiryTime) {
       res.render('error',{msg:"provide expire time"});
     }
@@ -52,43 +54,42 @@ app.post('/shortUrls', async (req, res) => {
       res.render('error',{msg:"provide valid expire time"});
     }
 
-    const urlCached = await cacheService.getValue(url);
+    const urlCached = await cacheService.getValue(customUrl);
     if(urlCached){
       console.log('cache----',urlCached);
-      if(customUrl) {
-        cacheService.replaceValue(url,{...urlCached,customUrl});
-        res.render('index',{ searched:{...urlCached,customUrl}, shortUrls});
-      }
       res.render('index',{ searched:urlCached, shortUrls});
     }
 
     if(!urlCached) {
       //not found in cache then hit db
-      let searched = await ShortUrl.findOne({url:url});
-      if(searched) {
-        searched.searched++;
-        searched.save();
-        //searched 5 times so goes in cache
-        if(searched.searched >= 5) {           
-          cacheService.setValue( url,searched ); //in ms
+      const currentDate = new Date().getTime();
+      const expiryDate = new Date(currentDate + parseInt(expiryTime) * 1000);
+      const newShortId = shortId.generate().toLowerCase();
+      let newIdExists = await ShortUrl.findOne({ customUrl: newShortId });
+      if (customUrl == ''){
+        if (newIdExists) {
+          res.render('error',{msg:"id was regenerated at server please try again"});
         }
-        console.log('db----',searched);
-        res.render('index',{ searched, shortUrls})
+        await ShortUrl.create({ url, customUrl:newShortId, expiryDate })
       }
       else {
-        const currentDate = new Date().getTime();
-        const expiryDate = new Date(currentDate + parseInt(expiryTime) * 1000);
-        if (customUrl == ''){
-          await ShortUrl.create({ url, customUrl:shortId.generate().toLowerCase(), expiryDate })
+        let nameExists = await ShortUrl.findOne({ customUrl });
+        if(nameExists && nameExists.url!==url){
+          res.render('error',{msg:"name already exists, choose another"});
+        }
+        else if (nameExists && nameExists.url===url) {
+          //not found in cache then hit db
+          nameExists.searched++;
+          nameExists.save();
+          //searched 5 times so goes in cache
+          if(nameExists.searched >= 5) {           
+            cacheService.setValue( customUrl,nameExists ); //in ms
+          }
+          console.log('db----',nameExists);
+          res.render('index',{ searched:nameExists, shortUrls})
         }
         else {
-          let nameExists = await ShortUrl.findOne({ customUrl });
-          if(nameExists){
-            res.render('error',{msg:"name already exists, choose another"});
-          }
-          else {
-            await ShortUrl.create({ url, customUrl, expiryDate })
-          }
+          await ShortUrl.create({ url, customUrl, expiryDate })
         }
       }
     }      

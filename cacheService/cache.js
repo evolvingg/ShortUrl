@@ -31,14 +31,3 @@ exports.setValue = (key, value, lifetime = DEFAULT_CACHE_LIFETIME) => {
     });
   });
 }
-
-exports.replaceValue = (key, value, lifetime = DEFAULT_CACHE_LIFETIME) => {
-  return new Promise((resolve, reject) => {
-    memcached.replace(key, value, lifetime, function (err) {
-      if (err) {
-        return reject(err);
-      }
-      return resolve(value);
-    });
-  });
-}
