@@ -8,26 +8,25 @@ const ShortUrlsSchema = new Schema({
     url: {
         type: String,
         required: true
-    },
+      },
     hits: {
         type: Number,
         required: true,
         default: 0
-    },
+      },
     customUrl: {
         type: String,
         required: true
-    },
+      },
     expiryDate: {
         type: Date,
         default: Date.now ,
         index: { expires: 0 },
+      },
     },
-    searched: {
-        type: Number,
-        required: true,
-        default: 1
+    {
+        timestamps: true,
     }
-});
+);
 
 module.exports = mongoose.model('ShortUrl', ShortUrlsSchema);

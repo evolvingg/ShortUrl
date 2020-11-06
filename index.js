@@ -14,17 +14,16 @@ mongoose.connect('mongodb://tanvi:DNGUBIEAXOAryyfM@cluster0-shard-00-00-6utpu.mo
 
 
 app.set('view engine', 'ejs');
-app.use(express.urlencoded({ extended: false}))
+app.use(express.urlencoded({ extended: false})) //midddleware
 
 
 app.get('/', async (req, res) => {
   try {
     const shortUrls = await ShortUrl.find()
-    res.render('index', { shortUrls, searched: null })
+    return res.render('index', { shortUrls, searched: null })
   }
   catch(err) {
-    res.render('error',{msg:err});
-    console.log(err,':--');
+    return res.render('error',{msg:err});
   }
 });
 
@@ -39,7 +38,7 @@ app.post('/shortUrls', async (req, res) => {
       const urlRegex = new RegExp(/((https):\/\/.)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/);
       let result = urlRegex.test(url);
       if(!result) {
-        res.render('error',{msg:"incorrect url format"});
+        return res.render('error',{msg:"incorrect url format"});
       } 
     }
   
@@ -48,76 +47,64 @@ app.post('/shortUrls', async (req, res) => {
 
     //expiry time should be correct
     if(!expiryTime) {
-      res.render('error',{msg:"provide expire time"});
+      return res.render('error',{msg:"provide expire time"});
     }
     else if(expiryTime && Number.isNaN(expiryTime)){
-      res.render('error',{msg:"provide valid expire time"});
+      return res.render('error',{msg:"provide valid expire time"});
     }
 
-    const urlCached = await cacheService.getValue(customUrl);
-    if(urlCached){
-      console.log('cache----',urlCached);
-      res.render('index',{ searched:urlCached, shortUrls});
+    const currentDate = new Date().getTime();
+    const expiryDate = new Date(currentDate + parseInt(expiryTime) * 1000);
+    const newShortId = shortId.generate().toLowerCase();
+    let newIdExists = await ShortUrl.findOne({ customUrl: newShortId });
+    if (customUrl === ''){
+      if (newIdExists) {
+        return res.render('error',{msg:"id was regenerated at server please try again"});
+      }
+      return await ShortUrl.create({ url, customUrl:newShortId, expiryDate })
     }
-
-    if(!urlCached) {
-      //not found in cache then hit db
-      const currentDate = new Date().getTime();
-      const expiryDate = new Date(currentDate + parseInt(expiryTime) * 1000);
-      const newShortId = shortId.generate().toLowerCase();
-      let newIdExists = await ShortUrl.findOne({ customUrl: newShortId });
-      if (customUrl == ''){
-        if (newIdExists) {
-          res.render('error',{msg:"id was regenerated at server please try again"});
-        }
-        await ShortUrl.create({ url, customUrl:newShortId, expiryDate })
+    else {
+      let nameExists = await ShortUrl.findOne({ customUrl });
+      if(nameExists ){
+        res.render('error',{msg:"name already exists, choose another"});
       }
       else {
-        let nameExists = await ShortUrl.findOne({ customUrl });
-        if(nameExists && nameExists.url!==url){
-          res.render('error',{msg:"name already exists, choose another"});
-        }
-        else if (nameExists && nameExists.url===url) {
-          //not found in cache then hit db
-          nameExists.searched++;
-          nameExists.save();
-          //searched 5 times so goes in cache
-          if(nameExists.searched >= 5) {           
-            cacheService.setValue( customUrl,nameExists ); //in ms
-          }
-          console.log('db----',nameExists);
-          res.render('index',{ searched:nameExists, shortUrls})
-        }
-        else {
-          await ShortUrl.create({ url, customUrl, expiryDate })
-        }
+        await ShortUrl.create({ url, customUrl, expiryDate })
       }
     }      
-
-    res.redirect('/');
+    return res.redirect('/');
   }
   catch(err) {
-    res.render('error',{msg:err});
     console.log(err,':--');
+    res.render('error',{msg:err});
   }
 })
 
  
 app.get('/:shortUrl', async (req, res) => {
   try {
-    const shortUrl = await ShortUrl.findOne({customUrl: req.params.shortUrl})
-
-    if(shortUrl == null) {
-      res.render('error',{msg:'link expired'});
-      return res.sendStatus(404);
+    const urlCached = await cacheService.getValue(req.params.shortUrl);
+    if(urlCached){
+      console.log('cache----',urlCached);
+      return res.redirect(urlCached.url);
     }
-    shortUrl.hits++;
-    shortUrl.save();
-    res.redirect(shortUrl.url)
+    else {
+      console.log('from db-------')
+      const shortUrl = await ShortUrl.findOne({customUrl: req.params.shortUrl})
+
+      if(shortUrl == null) {
+       return res.status(404).render('error',{msg:'link expired'});
+      }
+      shortUrl.hits++;
+      shortUrl.save();
+      if(shortUrl.hits >= 5) {           
+        cacheService.setValue(req.params.shortUrl, {url:shortUrl.url,expiryDate:shortUrl.expiryDate,createdAt:shortUrl.createdAt} ); //in ms
+      }
+      return res.redirect(shortUrl.url);
+    }
   }
   catch(err) {
-    res.render('error',{msg:err});
-    console.log(err,':--');
+    return res.render('error',{msg:err});
   }
 })
 
